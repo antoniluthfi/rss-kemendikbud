@@ -5,11 +5,11 @@ const { parse, format } = require("date-fns");
 const { id } = require("date-fns/locale");
 
 // Fungsi untuk mengambil dan mengonversi data ke RSS
-const generateRSS = async () => {
+const generateRSS = async (baseUrl) => {
   const feed = new RSS({
     title: "Pengumuman Dikti Kemdikbud",
     description: "RSS feed dari halaman pengumuman Dikti Kemdikbud",
-    feed_url: "http://localhost:3000/rss",
+    feed_url: `${baseUrl}/rss`,
     site_url: "https://dikti.kemdikbud.go.id/category/pengumuman",
     language: "id",
   });
@@ -64,7 +64,16 @@ const generateRSS = async () => {
   }
 };
 
-// Export the generateRSS function
+// Endpoint untuk RSS feed
+const generateAnnouncementList = async (req, res) => {
+  const rssFeed = await generateRSS(`https://${req.headers.host}`);
+  if (!rssFeed) {
+    return res.status(500).send("Gagal membuat RSS feed");
+  }
+  res.setHeader("Content-Type", "application/xml");
+  res.send(rssFeed);
+};
+
 module.exports = {
-  generateRSS
+  generateAnnouncementList,
 };
