@@ -20,7 +20,7 @@ const generateRSS = async (baseUrl) => {
     );
     const $ = cheerio.load(response.data);
 
-    $(".archive-list a").each((i, el) => {
+    $(".archive-list a.card-artikel").each((i, el) => {
       const title = $(el).find(".card-content h3 span").text().trim();
       const url = $(el).attr("href");
       const dateText = $(el).find(".card-content .card-date").text().trim(); // Ambil teks tanggal
@@ -28,23 +28,60 @@ const generateRSS = async (baseUrl) => {
       // Konversi tanggal ke format RFC-1123
       let pubDate = "Invalid Date";
       if (dateText) {
-        const [datePart, timePart] = dateText.split(" | ");
-        const timeValue = timePart.replace(" WIB", "").split(":");
-
         try {
-          let parsedDate = parse(datePart, "d MMMM yyyy", new Date(), {
-            locale: id,
-          });
-          // Set the hours and minutes
-          parsedDate.setHours(parseInt(timeValue[0]));
-          parsedDate.setMinutes(parseInt(timeValue[1]));
-          // Convert WIB (UTC+7) to GMT/UTC
-          parsedDate.setHours(parsedDate.getHours() - 7);
-          pubDate = format(parsedDate, "EEE, dd MMM yyyy HH:mm:ss 'GMT'", {
-            locale: id,
-          });
+          // Check if dateText follows expected pattern
+          if (!dateText.includes(" | ")) {
+            console.log("Date format incorrect, missing ' | ' separator:", dateText);
+            throw new Error("Date format incorrect");
+          }
+          
+          const [datePart, timePart] = dateText.split(" | ");
+          
+          if (!timePart || !timePart.includes(":")) {
+            console.log("Time format incorrect:", timePart);
+            throw new Error("Time format incorrect");
+          }
+          
+          const timeValue = timePart.replace(" WIB", "").trim().split(":");
+          
+          // Create date object manually for maximum control
+          const monthMap = {
+            "januari": 0, "februari": 1, "maret": 2, "april": 3, "mei": 4, "juni": 5,
+            "juli": 6, "agustus": 7, "september": 8, "oktober": 9, "november": 10, "desember": 11
+          };
+          
+          const dateComponents = datePart.split(" ");
+          
+          if (dateComponents.length !== 3) {
+            throw new Error("Date component format incorrect");
+          }
+          
+          const day = parseInt(dateComponents[0], 10);
+          const monthLower = dateComponents[1].toLowerCase();
+          const year = parseInt(dateComponents[2], 10);
+          const hours = parseInt(timeValue[0], 10);
+          const minutes = parseInt(timeValue[1], 10);
+          
+          if (isNaN(day) || isNaN(year) || isNaN(hours) || isNaN(minutes)) {
+            throw new Error("Date parsing failed - non-numeric components");
+          }
+          
+          const monthIndex = monthMap[monthLower];
+          if (monthIndex === undefined) {
+            throw new Error("Unknown month");
+          }
+          
+          // Create date in WIB timezone
+          const parsedDate = new Date(Date.UTC(year, monthIndex, day, hours - 7, minutes));
+          if (isNaN(parsedDate.getTime())) {
+            throw new Error("Invalid date created");
+          }
+          
+          // Format the date according to RFC-822, which is the standard for RSS
+          pubDate = parsedDate.toUTCString();
         } catch (err) {
-          console.error("Gagal parsing tanggal:", dateText);
+          console.error("Gagal parsing tanggal:", err.message);
+          console.error("Date text was:", dateText);
         }
       }
 
