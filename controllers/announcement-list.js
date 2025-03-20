@@ -1,8 +1,6 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
 const RSS = require("rss");
-const { parse, format } = require("date-fns");
-const { id } = require("date-fns/locale");
 
 // Fungsi untuk mengambil dan mengonversi data ke RSS
 const generateRSS = async (baseUrl) => {
@@ -31,14 +29,12 @@ const generateRSS = async (baseUrl) => {
         try {
           // Check if dateText follows expected pattern
           if (!dateText.includes(" | ")) {
-            console.log("Date format incorrect, missing ' | ' separator:", dateText);
             throw new Error("Date format incorrect");
           }
           
           const [datePart, timePart] = dateText.split(" | ");
           
           if (!timePart || !timePart.includes(":")) {
-            console.log("Time format incorrect:", timePart);
             throw new Error("Time format incorrect");
           }
           
